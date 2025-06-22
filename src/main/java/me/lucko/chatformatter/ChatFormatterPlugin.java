@@ -1,6 +1,7 @@
 package me.lucko.chatformatter;
 
 import net.milkbowl.vault.chat.Chat;
+import me.clip.placeholderapi.PlaceholderAPI;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -44,6 +45,11 @@ public class ChatFormatterPlugin extends JavaPlugin implements Listener {
     private String format;
 
     /**
+     * Whether PlaceholderAPI is available on this server
+     */
+    private boolean placeholderApiAvailable = false;
+
+    /**
      * The current Vault chat implementation registered on the server.
      * Automatically updated as new services are registered.
      */
@@ -54,6 +60,7 @@ public class ChatFormatterPlugin extends JavaPlugin implements Listener {
         saveDefaultConfig();
         reloadConfigValues();
         refreshVault();
+        checkPlaceholderAPI();
         getServer().getPluginManager().registerEvents(this, this);
     }
 
@@ -73,11 +80,27 @@ public class ChatFormatterPlugin extends JavaPlugin implements Listener {
         this.vaultChat = vaultChat;
     }
 
+    private void checkPlaceholderAPI() {
+        boolean pluginAvailable = getServer().getPluginManager().getPlugin("PlaceholderAPI") != null;
+        boolean configEnabled = getConfig().getBoolean("placeholderapi.enabled", true);
+        
+        this.placeholderApiAvailable = pluginAvailable && configEnabled;
+        
+        if (pluginAvailable && configEnabled) {
+            getLogger().info("PlaceholderAPI found and enabled! Placeholder support active.");
+        } else if (pluginAvailable && !configEnabled) {
+            getLogger().info("PlaceholderAPI found but disabled in config. Placeholder support inactive.");
+        } else {
+            getLogger().info("PlaceholderAPI not found. Placeholder support disabled.");
+        }
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length != 0 && args[0].equalsIgnoreCase("reload")) {
             reloadConfig();
             reloadConfigValues();
+            checkPlaceholderAPI();
 
             sender.sendMessage("Reloaded successfully.");
             return true;
@@ -103,13 +126,15 @@ public class ChatFormatterPlugin extends JavaPlugin implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onChatLow(AsyncPlayerChatEvent e) {
         // Set out format on the lowest priority - allow other plugins to override or add their own parts.
-        e.setFormat(this.format);
+        if (!placeholderApiAvailable) {
+            e.setFormat(this.format);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onChatHigh(AsyncPlayerChatEvent e) {
         // Replace our placeholders on highest - just before
-        String format = e.getFormat();
+        String format = !placeholderApiAvailable ? e.getFormat() : colorize(PlaceholderAPI.setPlaceholders(e.getPlayer(), this.format));
 
         if (this.vaultChat != null) {
             format = replaceAll(PREFIX_PLACEHOLDER_PATTERN, format, () -> colorize(this.vaultChat.getPlayerPrefix(e.getPlayer())));

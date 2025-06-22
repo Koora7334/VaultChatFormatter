@@ -14,5 +14,17 @@
 # {displayname} ==> the players displayname
 # {message} ==> the message being sent by the player
 #
+# If PlaceholderAPI is installed, you can also use any PlaceholderAPI placeholders
+# in the format (e.g., %player_health%, %player_food_level%, etc.)
+#
+# Example with PlaceholderAPI placeholders:
+# format: "<{prefix}{name}{suffix}> &7[&c%player_health%&7/&c%player_max_health%&7] &f{message}"
+#
 # Standard Minecraft color codes can be used in the format.
 format: "<{prefix}{name}{suffix}> {message}"
+
+# PlaceholderAPI settings
+placeholderapi:
+  # Whether to enable PlaceholderAPI support
+  # Set to false to disable PlaceholderAPI placeholders even if the plugin is installed
+  enabled: true
